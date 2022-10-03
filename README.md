@@ -15,8 +15,8 @@ To be able to use Fiks IO you have to have an active Fiks IO account with an ass
 
 ## Examples
 ### Sending message
-```c#
-var client = new FiksIOClient(configuration); // See setup of configuration below
+```csharp
+var client = await FiksIOClient.CreateAsync(configuration); // See setup of configuration below
 meldingRequest = new MeldingRequest(
                             avsenderKontoId: senderId, // Sender id as Guid
                             mottakerKontoId: receiverId, // Receiver id as Guid
@@ -39,8 +39,8 @@ await client.Send(meldingRequest);
 
 #### Write zip to file
 
-```c#
-var client = new FiksIOClient(configuration); // See setup of configuration below
+```csharp
+var client = await FiksIOClient.CreateAsync(configuration); // See setup of configuration below
 
 var onReceived = new EventHandler<MottattMeldingArgs>((sender, fileArgs) =>
                 {
@@ -55,8 +55,8 @@ client.NewSubscription(onReceived);
 ```
 
 #### Process archive as stream
-```c#
-var client = new FiksIOClient(configuration); // See setup of configuration below
+```csharp
+var client = await FiksIOClient.CreateAsync(configuration); // See setup of configuration below
 
 var onReceived = new EventHandler<MottattMeldingArgs>((sender, fileArgs) =>
                 {
@@ -74,8 +74,8 @@ client.NewSubscription(onReceived);
 
 #### Reply to message
 You can reply directly to a message using the ReplySender.
-```c#
-var client = new FiksIOClient(configuration); // See setup of configuration below
+```csharp
+var client = await FiksIOClient.CreateAsync(configuration); // See setup of configuration below
 
 var onReceived = new EventHandler<MottattMeldingArgs>((sender, fileArgs) =>
                 {
@@ -90,8 +90,8 @@ client.NewSubscription(onReceived);
 ### Lookup
 Using lookup, you can find which Fiks IO account to send a message to, given organization number, message type and access level needed to read the message.
 
-```c#
-var client = new FiksIOClient(configuration); // See setup of configuration below
+```csharp
+var client = await FiksIOClient.CreateAsync(configuration); // See setup of configuration below
 
 var request = new LookupRequest(
     identifikator: "ORG_NO.987654321",
@@ -101,11 +101,16 @@ var request = new LookupRequest(
 var receiverKontoId = await client.Lookup(request); 
 ```
 
+### IsOpen
+This method can be used to check if the amqp connection is open. 
+
 ### Configuration
 
 Two convenience functions are provided for generating default configurations for *prod* and *test*,
 `CreateMaskinportenProdConfig` and `CreateMaskinportenTestConfig`. Only the required configuration parameters must be provided,
 the rest will be set to default values for the given environment. 
+
+**keepAlive**: Optional setting. Set the `keepAlive` to true if you want the client to check every 5 minutes if the amqp connection is open and automatically reconnect
 
 **privatNokkel**: The `privatNokkel` property expects a private key in PKCS#8 format. Private key which has a PKCS#1 will cause an exception. A PKCS#1 key can be converted using this command: 
 ```powershell
@@ -119,7 +124,7 @@ Content in file is expected value in `privateNokkel`, i.e.
 
 ```
 
-```c#
+```csharp
 // Prod config
 var config = FiksIOConfiguration.CreateProdConfiguration(
     integrasjonId: integrationId,
@@ -127,7 +132,8 @@ var config = FiksIOConfiguration.CreateProdConfiguration(
     kontoId: kontoId,
     privatNokkel: privatNokkel,
     issuer: issuer, //klientid for maskinporten
-    certificate: certificat
+    certificate: certificat,
+    keepAlive: false // Optional: use this if you want to use the keepAlive functionality. Default = false
 );
 
 // Test config
@@ -137,14 +143,15 @@ var config = FiksIOConfiguration.CreateTestConfiguration(
     kontoId: kontoId,
     privatNokkel: privatNokkel, 
     issuer: issuer, //klientid for maskinporten
-    certificate: certificat
+    certificate: certificat,
+    keepAlive: false // Optional: use this if you want to use the keepAlive functionality. Default = false
 );
 ```
 
 
 If necessary, all parameters of configuration can be set in detail.
 
-```c#
+```csharp
 // Fiks IO account configuration
 var kontoConfig = new KontoConfiguration(
                     kontoId: /* Fiks IO accountId as Guid */,
@@ -169,10 +176,13 @@ var apiConfig = new ApiConfiguration(
                 host: "api.fiks.test.ks.no",
                 port: 443);
 
-// Optional: Use custom amqp host (i.e. for connection to test queue)
+// Optional: Use custom amqp host (i.e. for connection to test queue). 
+// Optional: Set keepAlive: true if you want the FiksIOClient to check if amqp connection is open every 5 minutes and automatically reconnect. 
+// another option to using keepAlive is to use the isOpen() method on the FiksIOClient and implement a keepalive strategy yourself 
 var amqp = new AmqpConfiguration(
                 host: "io.fiks.test.ks.no",
-                port: 5671);
+                port: 5671,
+                keepAlive: false); 
 
 // Combine all configurations
 var configuration = new FiksIOConfiguration(kontoConfig, integrationConfig, maskinportenConfig, apiConfig, amqpConfig);
@@ -183,7 +193,7 @@ var configuration = new FiksIOConfiguration(kontoConfig, integrationConfig, mask
 By default when sending a message, the public key of the receiver will be fetched using the Catalog Api. If you instead 
 need to provide the public key by some other means, you can implement the IPublicKeyProvider interface, and inject it 
 when creating your client like this:
-```c#
+```csharp
 var client = new FiksIOClient(configuration, myPublicKeyProvider);
 ```
 
