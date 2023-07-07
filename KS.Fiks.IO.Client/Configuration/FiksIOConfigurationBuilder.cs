@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 
 namespace KS.Fiks.IO.Client.Configuration
@@ -10,7 +11,8 @@ namespace KS.Fiks.IO.Client.Configuration
         private IntegrasjonConfiguration _integrasjonConfiguration;
         private KontoConfiguration _kontoConfiguration;
         private AsiceSigningConfiguration _asiceSigningConfiguration;
-        private bool ampqKeepAlive = false;
+        private bool ampqKeepAlive = true;
+        private int ampqKeepAliveHealthCheckInterval = AmqpConfiguration.DefaultKeepAliveHealthCheckInterval;
         private string amqpApplicationName = string.Empty;
         private ushort amqpPrefetchCount = 10;
         private string maskinportenIssuer = string.Empty;
@@ -21,12 +23,38 @@ namespace KS.Fiks.IO.Client.Configuration
             return new FiksIOConfigurationBuilder();
         }
 
+        public FiksIOConfiguration BuildConfiguration(string amqpHost, int amqpPort = 5671)
+        {
+            ValidateConfigurations();
+
+            return new FiksIOConfiguration(
+                amqpConfiguration: new AmqpConfiguration(amqpHost, amqpPort, applicationName: amqpApplicationName, prefetchCount: amqpPrefetchCount, keepAlive: ampqKeepAlive),
+                apiConfiguration: ApiConfiguration.CreateTestConfiguration(),
+                asiceSigningConfiguration: _asiceSigningConfiguration,
+                integrasjonConfiguration: _integrasjonConfiguration,
+                kontoConfiguration: _kontoConfiguration,
+                maskinportenConfiguration: FiksIOConfiguration.CreateMaskinportenTestConfig(maskinportenIssuer, maskinportenCertificate));
+        }
+
+        public FiksIOConfiguration BuildConfiguration(string amqpHost, string apiHost, int amqpPort = 5671, int apiPort = 443)
+        {
+            ValidateConfigurations();
+
+            return new FiksIOConfiguration(
+                amqpConfiguration: new AmqpConfiguration(amqpHost, amqpPort, applicationName: amqpApplicationName, prefetchCount: amqpPrefetchCount, keepAlive: ampqKeepAlive),
+                apiConfiguration: new ApiConfiguration(host: apiHost, port: apiPort),
+                asiceSigningConfiguration: _asiceSigningConfiguration,
+                integrasjonConfiguration: _integrasjonConfiguration,
+                kontoConfiguration: _kontoConfiguration,
+                maskinportenConfiguration: FiksIOConfiguration.CreateMaskinportenTestConfig(maskinportenIssuer, maskinportenCertificate));
+        }
+
         public FiksIOConfiguration BuildTestConfiguration()
         {
             ValidateConfigurations();
 
             return new FiksIOConfiguration(
-                amqpConfiguration: new AmqpConfiguration(AmqpConfiguration.TestHost, applicationName: amqpApplicationName, prefetchCount: amqpPrefetchCount, keepAlive: ampqKeepAlive),
+                amqpConfiguration: new AmqpConfiguration(AmqpConfiguration.TestHost, applicationName: amqpApplicationName, prefetchCount: amqpPrefetchCount, keepAlive: ampqKeepAlive, keepAliveCheckInterval: ampqKeepAliveHealthCheckInterval),
                 apiConfiguration: ApiConfiguration.CreateTestConfiguration(),
                 asiceSigningConfiguration: _asiceSigningConfiguration,
                 integrasjonConfiguration: _integrasjonConfiguration,
@@ -54,12 +82,18 @@ namespace KS.Fiks.IO.Client.Configuration
             return this;
         }
 
-        public FiksIOConfigurationBuilder WithAsiceSigningConfiguration(string certificatePath, string certificatePrivateKeyPath)
+        /*
+         * AsiceSigning with public/private key pair
+         */
+        public FiksIOConfigurationBuilder WithAsiceSigningConfiguration(string publicKeyPath, string privateKeyPath)
         {
-            _asiceSigningConfiguration = new AsiceSigningConfiguration(certificatePath, certificatePrivateKeyPath);
+            _asiceSigningConfiguration = new AsiceSigningConfiguration(publicKeyPath, privateKeyPath);
             return this;
         }
-        
+
+        /*
+         * AsiceSigning with a X509Certificate2 that must contain a matching privatekey. This can be the same as used for Maskinporten
+         */
         public FiksIOConfigurationBuilder WithAsiceSigningConfiguration(X509Certificate2 x509Certificate2)
         {
             _asiceSigningConfiguration = new AsiceSigningConfiguration(x509Certificate2);
@@ -77,12 +111,24 @@ namespace KS.Fiks.IO.Client.Configuration
             _kontoConfiguration = new KontoConfiguration(fiksKontoId, fiksPrivateKey);
             return this;
         }
+        
+        public FiksIOConfigurationBuilder WithFiksKontoConfiguration(Guid fiksKontoId, IEnumerable<string> fiksPrivateKeys)
+        {
+            _kontoConfiguration = new KontoConfiguration(fiksKontoId, fiksPrivateKeys);
+            return this;
+        }
 
-        public FiksIOConfigurationBuilder WithAmqpConfiguration(string applicationName, ushort prefetchCount, bool keepAlive = false)
+        public FiksIOConfigurationBuilder WithAmqpConfiguration(string applicationName, ushort prefetchCount, bool keepAlive = true, int keepAliveHealthCheckInterval = AmqpConfiguration.DefaultKeepAliveHealthCheckInterval)
         {
             ampqKeepAlive = keepAlive;
             amqpApplicationName = applicationName;
             amqpPrefetchCount = prefetchCount;
+            ampqKeepAliveHealthCheckInterval = keepAliveHealthCheckInterval;
+            return this;
+        }
+
+        public FiksIOConfigurationBuilder WithApiConfiguration(string hostName, int hostPort)
+        {
             return this;
         }
 
@@ -104,6 +150,12 @@ namespace KS.Fiks.IO.Client.Configuration
             {
                 throw new ArgumentException(
                     "FiksKontoConfiguration missing. Have you called the WithFiksKontoConfiguration( ... ) in this builder?");
+            }
+
+            if (_asiceSigningConfiguration == null)
+            {
+                throw new ArgumentException(
+                    "AsiceSigningConfiguration missing. Have you called the WithAsiceSigningConfiguration( ... ) in this builder?");
             }
         }
     }

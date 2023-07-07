@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -12,8 +12,8 @@
 		<RepositoryUrl>https://github.com/ks-no/fiks-io-client-dotnet.git</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>FIKS</PackageTags>
-		<VersionPrefix>3.0.3</VersionPrefix>
-		<TargetFrameworks>net6.0;netcoreapp3.1;netstandard2.0</TargetFrameworks>
+		<VersionPrefix>3.0.7</VersionPrefix>
+		<TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<AssemblyVersion>3.0.0.0</AssemblyVersion>
@@ -42,10 +42,11 @@
 		<None Remove="Schema\no.ks.fiks.kvittering.serverfeil.v1.schema.json" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="KS.Fiks.ASiC-E" Version="1.0.5" />
-		<PackageReference Include="KS.Fiks.Crypto" Version="1.0.5" />
+		<PackageReference Include="KS.Fiks.ASiC-E" Version="2.0.0" />
+		<PackageReference Include="KS.Fiks.Crypto" Version="2.0.0" />
 		<PackageReference Include="KS.Fiks.IO.Send.Client" Version="1.0.9" />
-		<PackageReference Include="KS.Fiks.Maskinporten.Client" Version="1.1.5" />
+		<PackageReference Include="KS.Fiks.Maskinporten.Client" Version="1.1.6" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
 		<PackageReference Include="RabbitMQ.Client" Version="6.5.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="KS.Fiks.QA" Version="1.0.0" PrivateAssets="All" />
