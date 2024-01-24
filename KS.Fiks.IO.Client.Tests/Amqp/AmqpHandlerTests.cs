@@ -29,16 +29,16 @@ namespace KS.Fiks.IO.Client.Tests.Amqp
         }
 
         [Fact]
-        public void ThrowsExceptionWhenConnectionFactoryThrows()
+        public async System.Threading.Tasks.Task ThrowsExceptionWhenConnectionFactoryThrows()
         {
-            Assert.ThrowsAsync<FiksIOAmqpConnectionFailedException>(() =>
+            await Assert.ThrowsAsync<FiksIOAmqpConnectionFailedException>(() =>
                 _fixture.WhereConnectionfactoryThrowsException().CreateSutAsync());
         }
 
         [Fact]
-        public void ThrowsExceptionWhenConnectionThrows()
+        public async System.Threading.Tasks.Task ThrowsExceptionWhenConnectionThrows()
         {
-            Assert.ThrowsAsync<FiksIOAmqpConnectionFailedException>(() =>
+            await Assert.ThrowsAsync<FiksIOAmqpConnectionFailedException>(() =>
                 _fixture.WhereConnectionThrowsException().CreateSutAsync());
         }
 
@@ -80,30 +80,6 @@ namespace KS.Fiks.IO.Client.Tests.Amqp
 
             _fixture.AmqpReceiveConsumerMock.Raise(_ => _.ConsumerCancelled += null, this, null);
             counter.Should().Be(1);
-        }
-
-        [Fact]
-        public void GetsTokenFromMaskinportenWhenCreated()
-        {
-            var sut = _fixture.CreateSut();
-            _fixture.MaskinportenClientMock.Verify(_ => _.GetAccessToken(It.IsAny<string>()));
-        }
-
-        [Fact]
-        public void PasswordIsSetToIntegrationPasswordAndMaskinportenToken()
-        {
-            var password = "myIntegrationPassword";
-            var token = "maskinportenExpectedToken";
-            var sut = _fixture.WithMaskinportenToken(token).WithIntegrationPassword(password).CreateSut();
-            _fixture.ConnectionFactoryMock.VerifySet(_ => _.Password = $"{password} {token}");
-        }
-
-        [Fact]
-        public void UserNameIsSetToIntegrationId()
-        {
-            var id = Guid.NewGuid();
-            var sut = _fixture.WithIntegrationId(id).CreateSut();
-            _fixture.ConnectionFactoryMock.VerifySet(_ => _.UserName = id.ToString());
         }
     }
 }
