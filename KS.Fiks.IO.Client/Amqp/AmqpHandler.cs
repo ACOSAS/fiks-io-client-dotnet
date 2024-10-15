@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Authentication;
 using System.Threading.Tasks;
 using KS.Fiks.IO.Client.Configuration;
 using KS.Fiks.IO.Client.Dokumentlager;
@@ -129,13 +130,13 @@ namespace KS.Fiks.IO.Client.Amqp
                 _receiveConsumer.ConsumerCancelled -= _cancelledEvent;
             }
 
-            _channel.Dispose();
-            _connection.Dispose();
-
             // Unsubscribe events for logging of RabbitMQ events
             _connection.ConnectionShutdown -= _amqpWatcher.HandleConnectionShutdown;
             _connection.ConnectionBlocked -= _amqpWatcher.HandleConnectionBlocked;
             _connection.ConnectionUnblocked -= _amqpWatcher.HandleConnectionUnblocked;
+
+            _channel.Dispose();
+            _connection.Dispose();
         }
 
         private Task Connect(AmqpConfiguration amqpConfiguration)
@@ -147,6 +148,7 @@ namespace KS.Fiks.IO.Client.Amqp
             _connection.ConnectionShutdown += _amqpWatcher.HandleConnectionShutdown;
             _connection.ConnectionBlocked += _amqpWatcher.HandleConnectionBlocked;
             _connection.ConnectionUnblocked += _amqpWatcher.HandleConnectionUnblocked;
+
             return Task.CompletedTask;
         }
 

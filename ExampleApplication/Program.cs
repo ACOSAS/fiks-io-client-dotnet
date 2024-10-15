@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics.Tracing;
 using System.IO;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using ExampleApplication.FiksIO;
@@ -29,6 +30,8 @@ namespace ExampleApplication
     class Program
     {
         private static MessageSender _messageSender;
+        private static FiksIOClient _fiksIoClient;
+        private static AppSettings appSettings;
         private static Guid _toAccountId;
         private static ILogger _logger;
         public const string FiksIOPing = "ping";
@@ -46,24 +49,25 @@ namespace ExampleApplication
             var configurationRoot = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: true)
-                .AddJsonFile($"appsettings.Development.json", optional: true).Build();
-            
+                .AddJsonFile($"appsettings.Test.json", optional: true).Build();
+
             var loggerFactory = InitSerilogConfiguration();
-            var appSettings = AppSettingsBuilder.CreateAppSettings(configurationRoot);
-            var configuration = FiksIoConfigurationBuilder.CreateConfiguration(appSettings);
-            var fiksIoClient = await FiksIOClient.CreateAsync(configuration, loggerFactory);
+            appSettings = AppSettingsBuilder.CreateAppSettings(configurationRoot);
+            var configuration = FiksIoConfigurationBuilder.CreateTestConfiguration(appSettings);
+
+            _fiksIoClient = await FiksIOClient.CreateAsync(configuration, loggerFactory);
             _rabbitMqEventLogger = new RabbitMQEventLogger(loggerFactory, EventLevel.Informational);
             
             // Creating messageSender as a local instance
-            _messageSender = new MessageSender(fiksIoClient, appSettings);
+            _messageSender = new MessageSender(_fiksIoClient, appSettings);
             
             // Setting the account to send messages to. In this case the same as sending account
             _toAccountId = appSettings.FiksIOConfig.FiksIoAccountId;
-            
+
             _logger = Log.ForContext(MethodBase.GetCurrentMethod()?.DeclaringType);
 
             var consoleKeyTask = Task.Run(() => { MonitorKeypress(); });
-
+            
             await new HostBuilder()
                 .ConfigureHostConfiguration((configHost) =>
                 {
@@ -73,7 +77,7 @@ namespace ExampleApplication
                 {
                     services.AddSingleton(appSettings);
                     services.AddSingleton(loggerFactory);
-                    services.AddSingleton<IFiksIOClient>(fiksIoClient);
+                    services.AddSingleton<IFiksIOClient>(_fiksIoClient);
                     services.AddHostedService<FiksIOSubscriber>();
                 })
                 .RunConsoleAsync();
@@ -87,6 +91,7 @@ namespace ExampleApplication
             _logger.Information("Press A-key for sending a Fiks-Arkiv V1 'ping' message");
             _logger.Information("Press P-key for sending a Fiks-Plan V2 'ping' message");
             _logger.Information("Press M-key for sending a Fiks-Matrikkelfoering V2 'ping' message");
+            _logger.Information("Press L-key for printing status information in console");
 
 
             ConsoleKeyInfo cki;
@@ -114,6 +119,10 @@ namespace ExampleApplication
                 {
                     _logger.Information("M-key pressed. Sending Fiks-Matrikkelfoering V2 ping-message to account id: {ToAccountId}", _toAccountId);
                     await _messageSender.Send(FiksMatrikkelfoeringPing, _toAccountId);
+                } else if (key == ConsoleKey.L)
+                {
+                    WriteHeartBeatConnectionStatusToLog();
+                    await WriteStatusFromApiToLog();
                 }
     
                 // Wait for an ESC
@@ -133,6 +142,19 @@ namespace ExampleApplication
             Log.Logger = logger;
 
             return LoggerFactory.Create(logging => logging.AddSerilog(logger));
+        }
+        
+        private static void WriteHeartBeatConnectionStatusToLog()
+        {
+            Log.Information($"FiksIOSubscriber status check - FiksIOClient connection IsOpen: {_fiksIoClient.IsOpen()}");
+        }
+
+        private static async Task WriteStatusFromApiToLog()
+        {
+            var konto = await _fiksIoClient.GetKonto(appSettings.FiksIOConfig.FiksIoAccountId).ConfigureAwait(false);
+            var status = await _fiksIoClient.GetKontoStatus(appSettings.FiksIOConfig.FiksIoAccountId).ConfigureAwait(false);
+            Log.Information($"FiksIOSubscriber status check - FiksIOClient Konto - antallkonsumenter  : {konto.AntallKonsumenter}");
+            Log.Information($"FiksIOSubscriber status check - FiksIOClient KontoStatus - antallkonsumenter : {status.AntallKonsumenter}");
         }
     }
 }

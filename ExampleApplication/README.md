@@ -12,12 +12,14 @@ The application listens to different keys for different types of ping-messages. 
 - A-key - Fiks-Arkiv protocol 'ping'-message
 - P-key - Fiks-Plan protocol 'ping'-message
 - M-key - Fiks-Matrikkelfoering protocol 'ping'-message
+- L-key - Write log with: IsOpen(), Maskinporten reachable and result from the status of the account from Fiks-IO rest-services 
 
-This is a very simple example of sending, receiving and replying to messages with this Fiks-IO-Client that logs information on the messages.
+The L-key will write status of the _IsOpen()_ method can be used for health checking. The _IsOpen()_ shows the connection status based on the RabbitMQ heartbeat.
+It writes also the status of "antallKonsumenter" (number of subscribers) from the Fiks IO API, that also can be used for health checking. The status property "antallKonsumenter" is the registered number of subscribers in RabbitMQ.
+
+This is a very simple example of sending, receiving and replying to messages with this Fiks-IO-Client that logs information on the messages. It sends the `testfile.txt` file as payload, and prints the text inside the file when it receives the message.
 
 If you're using a Fiks-Protokoll account, please remember to add yourself as an approved sending account. This is only necessary for Fiks-Protokoll accounts.
-
-The program will also periodically print the status of the _IsOpen()_ health status of the Fiks-IO connection. The _IsOpen()_ method can be used for health checking. 
 
 ## Getting started
 
@@ -48,12 +50,12 @@ Here is the example appsetting.json file with hopefully some helpful comments:
         "FiksIoIntegrationPassword": "<your integration password>", // Your Fiks Protokoll (Fiks-IO) integration password
         "FiksIoIntegrationScope": "ks:fiks", // Leave this as it is
         "FiksIoPrivateKey": "<path to private key>", // Path to the private key that is paired with the public key uploaded to your Fiks Protokoll (Fiks-IO) account
-        "MaskinPortenAudienceUrl": "https://ver2.maskinporten.no/", // Maskinporten Audience url. Test: "https://ver2.maskinporten.no", Prod: "https://maskinporten.no"
+        "MaskinPortenAudienceUrl": "https://test.maskinporten.no/", // Maskinporten Audience url. Test: "https://test.maskinporten.no", Prod: "https://maskinporten.no"
         "MaskinPortenCompanyCertificateThumbprint": "<your thumbprint>", // The thumbprint for the certificate used with Maskinporten
         "MaskinPortenCompanyCertificatePath": "", // The path to the certificate used with Maskinporten
         "MaskinPortenCompanyCertificatePassword": "", // The password for the certificate used with Maskinporten
         "MaskinPortenIssuer": "", // Maskinporten issuer
-        "MaskinPortenTokenUrl": "https://ver2.maskinporten.no/token", // Token url for Maskinporten. Test: "https://ver2.maskinporten.no/token", Prod: "https://maskinporten.no/token" 
+        "MaskinPortenTokenUrl": "https://test.maskinporten.no/token", // Token url for Maskinporten. Test: "https://test.maskinporten.no/token", Prod: "https://maskinporten.no/token" 
         "AsiceSigningPrivateKey": "", // The path to the private key for AsiceSigning of the payloads.
         "AsiceSigningPublicKey": "" // The path to the public key for verification of AsiceSigning of the payloads.
     }

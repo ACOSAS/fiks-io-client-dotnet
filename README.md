@@ -339,7 +339,8 @@ var configuration = new FiksIOConfiguration(
 - **applicationName**: Optional but recomended. Gives the Fiks-IO queue a name that you provide. Makes it easier to identify which queue is yours from a logging and management perspective.
 
 #### Fiks-IO Konto: 
-- **privatNokkel**: The `privatNokkel` property expects a private key in PKCS#8 format. Private key which has a PKCS#1 will cause an exception. 
+- **privatNokkel**: The `privatNokkel` property expects a private key in PKCS#8 format. Private key which has a PKCS#1 will cause an exception. This is the private key associated with the public key uploaded to your fiks-io/fiks-protokoll account.
+It is not required to be derived from the Maskinporten certificate. See example on how to convert a PKCS#1 or generate private/public keys further down.
 
 #### Asice signing:
 Asice signing is required since version 3.0.0 of this client. More information on Asice signing can be found [here](https://docs.digdir.no/dpi_dokumentpakke_sikkerhet.html).
@@ -347,22 +348,23 @@ Asice signing is required since version 3.0.0 of this client. More information o
 There are two ways of setting this up, either with a public/private key pair or a x509Certificate2 that also holds the private key.
 If you are reusing the x509Certificate2 from the `maskinporten` configuration you might have to inject the corresponding private key.
 
-Examples:
-A x509Certificate2 with a private key: `AsiceSigningConfiguration(X509Certificate2 x509Certificate2);`
-
-Or path to public/private key: `AsiceSigningConfiguration(string publicCertPath, string privateKeyPath);`
-
 A PKCS#1 key can be converted using this command:
 ```powershell
 openssl pkcs8 -topk8 -nocrypt -in <pkcs#1 key file> -out <pkcs#8 key file>
 ```
-Content in file is expected value in `privateNokkel`, i.e.
-```text
------BEGIN PRIVATE KEY-----
-... ...
------END PRIVATE KEY-----
 
+Example for generating private/public key pair for signing
+```powershell
+openssl genrsa -out key.pem 4096
+
+openssl req -new -x509 -key key.pem -out public.pem -days 99999
 ```
+
+**Examples:**
+
+x509Certificate2 with a private key `AsiceSigningConfiguration(X509Certificate2 x509Certificate2);`
+
+Path to public/private key: `AsiceSigningConfiguration(string publicCertPath, string privateKeyPath);`
 
 ### Public Key provider
 
