@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using KS.Fiks.IO.Client.Configuration;
+using KS.Fiks.IO.Send.Client.Configuration;
 using Ks.Fiks.Maskinporten.Client;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;

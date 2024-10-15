@@ -11,6 +11,7 @@ using Ks.Fiks.Maskinporten.Client;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using KS.Fiks.IO.Send.Client.Configuration;
 
 namespace KS.Fiks.IO.Client.Amqp
 {
