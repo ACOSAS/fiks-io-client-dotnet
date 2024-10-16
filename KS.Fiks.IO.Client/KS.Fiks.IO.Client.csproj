@@ -12,7 +12,7 @@
 		<RepositoryUrl>https://github.com/ks-no/fiks-io-client-dotnet.git</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>FIKS</PackageTags>
-		<VersionPrefix>4.0.8</VersionPrefix>
+		<VersionPrefix>4.0.4</VersionPrefix>
 		<TargetFrameworks>netstandard2.1;net6.0;net8.0</TargetFrameworks>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -44,13 +44,19 @@
 	<ItemGroup>
 		<PackageReference Include="KS.Fiks.ASiC-E" Version="3.0.1" />
 		<PackageReference Include="KS.Fiks.Crypto" Version="2.0.3" />
-		<PackageReference Include="KS.Fiks.IO.Send.Client" Version="2.0.0" />
-		<PackageReference Include="KS.Fiks.Maskinporten.Client" Version="1.1.10" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
 		<PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="KS.Fiks.QA" Version="1.0.0" PrivateAssets="All" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
 		<PackageReference Include="RabbitMQ.Client.OAuth2" Version="1.0.0" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(Configuration)'=='Release'">
+		<PackageReference Include="KS.Fiks.IO.Send.Client" Version="2.0.0" />
+		<PackageReference Include="KS.Fiks.Maskinporten.Client" Version="1.1.11" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<ProjectReference Include="..\..\fiks-io-send-client-dotnet\KS.Fiks.IO.Send.Client\KS.Fiks.IO.Send.Client.csproj" />
+		<ProjectReference Include="..\..\fiks-maskinporten-client-dotnet\KS.Fiks.Maskinporten.Client\KS.Fiks.Maskinporten.Client.csproj" />
 	</ItemGroup>
 </Project>
