@@ -65,6 +65,7 @@ namespace KS.Fiks.IO.Client.Configuration
             string issuer,
             X509Certificate2 maskinportenSertifikat,
             X509Certificate2 asiceSertifikat,
+            string keyIdentifier = null,
             string applicationName = null)
         {
             return new FiksIOConfiguration(
@@ -84,6 +85,7 @@ namespace KS.Fiks.IO.Client.Configuration
             string issuer,
             X509Certificate2 maskinportenSertifikat,
             X509Certificate2 asiceSertifikat,
+            string keyIdentifier = null,
             string applicationName = null)
         {
             return new FiksIOConfiguration(
@@ -91,28 +93,40 @@ namespace KS.Fiks.IO.Client.Configuration
                 apiConfiguration: ApiConfiguration.CreateTestConfiguration(),
                 integrasjonConfiguration: new IntegrasjonConfiguration(fiksIntegrasjonId, fiksIntegrasjonPassord),
                 kontoConfiguration: new KontoConfiguration(fiksKontoId, privatNokkel),
-                maskinportenConfiguration: CreateMaskinportenTestConfig(issuer, maskinportenSertifikat),
+                maskinportenConfiguration: CreateMaskinportenTestConfig(issuer, maskinportenSertifikat, keyIdentifier),
                 asiceSigningConfiguration: new AsiceSigningConfiguration(asiceSertifikat));
         }
 
-        public static MaskinportenClientConfiguration CreateMaskinportenProdConfig(string issuer, X509Certificate2 certificate)
+        public static MaskinportenClientConfiguration CreateMaskinportenProdConfig(
+            string issuer
+            , X509Certificate2 certificate
+            , string keyIdentifier = null
+        )
         {
             return new MaskinportenClientConfiguration(
                 audience: maskinportenProdAudience,
                 tokenEndpoint: maskinportenProdTokenEndpoint,
                 issuer: issuer, // KS issuer name
                 numberOfSecondsLeftBeforeExpire: 10,
-                certificate: certificate);
+                certificate: certificate,
+                keyIdentifier: keyIdentifier
+            );
         }
 
-        public static MaskinportenClientConfiguration CreateMaskinportenTestConfig(string issuer, X509Certificate2 certificate)
+        public static MaskinportenClientConfiguration CreateMaskinportenTestConfig(
+            string issuer
+            , X509Certificate2 certificate
+            , string keyIdentifier = null
+        )
         {
             return new MaskinportenClientConfiguration(
                 audience: maskinportenTestAudience,
                 tokenEndpoint: maskinportenTestTokenEndpoint,
                 issuer: issuer, // KS issuer name
                 numberOfSecondsLeftBeforeExpire: 10,
-                certificate: certificate);
+                certificate: certificate,
+                keyIdentifier: keyIdentifier
+            );
         }
     }
 }
