@@ -57,9 +57,9 @@
 		<PackageReference Include="KS.Fiks.Maskinporten.Client" Version="1.1.11" />
 	</ItemGroup>-->
 	<!-- Condition="'$(Configuration)' == 'Debug'" -->
-	<ItemGroup>
+	<!--<ItemGroup>
 		<ProjectReference Include="..\..\fiks-io-send-client-dotnet\KS.Fiks.IO.Send.Client\KS.Fiks.IO.Send.Client.csproj" />
 		<ProjectReference Include="..\..\fiks-maskinporten-client-dotnet\KS.Fiks.Maskinporten.Client\KS.Fiks.Maskinporten.Client.csproj" />
 		<ProjectReference Include="..\..\kryptering-dotnet\KS.Fiks.Crypto\KS.Fiks.Crypto.csproj" />
-	</ItemGroup>
+	</ItemGroup>-->
 </Project>
