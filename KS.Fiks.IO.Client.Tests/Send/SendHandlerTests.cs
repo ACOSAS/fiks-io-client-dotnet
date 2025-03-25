@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using KS.Fiks.IO.Client.Models;
 using KS.Fiks.IO.Crypto.Models;
@@ -30,11 +31,16 @@ namespace KS.Fiks.IO.Client.Tests.Send
 
             await sut.Send(request, payload).ConfigureAwait(false);
 
-            _fixture.FiksIOSenderMock.Verify(_ => _.Send(It.IsAny<MeldingSpesifikasjonApiModel>(), It.IsAny<Stream>()));
+            _fixture.FiksIOSenderMock.Verify(
+                _ => _.Send(
+                    It.IsAny<MeldingSpesifikasjonApiModel>(),
+                    It.IsAny<Stream>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
         }
 
         [Fact]
-        public async Task CallsSendWithExpectedMessageSpecificationApiModelWithKlientMeldingId()
+        public async Task CallsSendWithExpectedMessageSpecificationApiModelWithKlientHeaders()
         {
             var sut = _fixture.CreateSut();
 
@@ -42,6 +48,7 @@ namespace KS.Fiks.IO.Client.Tests.Send
                 avsenderKontoId: Guid.NewGuid(),
                 mottakerKontoId: Guid.NewGuid(),
                 klientMeldingId: Guid.NewGuid(),
+                klientKorrelasjonsId: Guid.NewGuid().ToString(),
                 meldingType: "Meldingsprotokoll",
                 ttl: TimeSpan.FromDays(2),
                 headere: null,
@@ -51,18 +58,22 @@ namespace KS.Fiks.IO.Client.Tests.Send
 
             await sut.Send(request, payload).ConfigureAwait(false);
 
-            _fixture.FiksIOSenderMock.Verify(_ => _.Send(
+            _fixture.FiksIOSenderMock.Verify(
+                _ => _.Send(
                 It.Is<MeldingSpesifikasjonApiModel>(
                     model => model.Ttl == (long)request.Ttl.TotalMilliseconds &&
                              model.SvarPaMelding == request.SvarPaMelding &&
                              model.AvsenderKontoId == request.AvsenderKontoId &&
                              model.MottakerKontoId == request.MottakerKontoId &&
-                             model.Headere[MeldingBase.headerKlientMeldingId] == request.KlientMeldingId.ToString()),
-                It.IsAny<Stream>()));
+                             model.Headere[MeldingBase.HeaderKlientMeldingId] == request.KlientMeldingId.ToString() &&
+                             model.Headere[MeldingBase.HeaderKlientKorrelasjonsId] == request.KlientKorrelasjonsId),
+                It.IsAny<Stream>(),
+                It.IsAny<CancellationToken>()),
+                Times.Once);
         }
 
         [Fact]
-        public async Task CallsSendWithExpectedMessageSpecificationApiModelAndNullKlientMeldingId()
+        public async Task CallsSendWithExpectedMessageSpecificationApiModelAndNullKlientHeaders()
         {
             var sut = _fixture.CreateSut();
 
@@ -78,14 +89,18 @@ namespace KS.Fiks.IO.Client.Tests.Send
 
             await sut.Send(request, payload).ConfigureAwait(false);
 
-            _fixture.FiksIOSenderMock.Verify(_ => _.Send(
+            _fixture.FiksIOSenderMock.Verify(
+                _ => _.Send(
                 It.Is<MeldingSpesifikasjonApiModel>(
                     model => model.Ttl == (long)request.Ttl.TotalMilliseconds &&
                              model.SvarPaMelding == request.SvarPaMelding &&
                              model.AvsenderKontoId == request.AvsenderKontoId &&
                              model.MottakerKontoId == request.MottakerKontoId &&
-                             !model.Headere.ContainsKey("klientMeldingId")),
-                It.IsAny<Stream>()));
+                             !model.Headere.ContainsKey("klientMeldingId") &&
+                             !model.Headere.ContainsKey("klientKorrelasjonsId")),
+                It.IsAny<Stream>(),
+                It.IsAny<CancellationToken>()),
+                Times.Once);
         }
 
         [Fact]

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using KS.Fiks.IO.Client.Amqp;
 using KS.Fiks.IO.Client.Models;
@@ -23,51 +24,51 @@ namespace KS.Fiks.IO.Client.Send
             _amqpAcknowledgeManager = amqpAcknowledgeManager;
         }
 
-        public async Task<SendtMelding> Svar(string meldingType, IList<IPayload> payloads, Guid? klientMeldingId = default)
+        public async Task<SendtMelding> Svar(string meldingType, IList<IPayload> payloads, Guid? klientMeldingId = default, CancellationToken cancellationToken = default)
         {
-            return await _sendHandler.Send(CreateMessageRequest(meldingType, klientMeldingId), payloads).ConfigureAwait(false);
+            return await _sendHandler.Send(CreateMessageRequest(meldingType, klientMeldingId), payloads, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<SendtMelding> Svar(string meldingType, Stream melding, string filnavn, Guid? klientMeldingId = default)
+        public async Task<SendtMelding> Svar(string meldingType, Stream melding, string filnavn, Guid? klientMeldingId = default, CancellationToken cancellationToken = default)
         {
-            return await Reply(meldingType, new StreamPayload(melding, filnavn), klientMeldingId)
+            return await Reply(meldingType, new StreamPayload(melding, filnavn), klientMeldingId, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        public async Task<SendtMelding> Svar(string meldingType, string melding, string filnavn, Guid? klientMeldingId = default)
+        public async Task<SendtMelding> Svar(string meldingType, string melding, string filnavn, Guid? klientMeldingId = default, CancellationToken cancellationToken = default)
         {
-            return await Reply(meldingType, new StringPayload(melding, filnavn), klientMeldingId)
+            return await Reply(meldingType, new StringPayload(melding, filnavn), klientMeldingId, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        public async Task<SendtMelding> Svar(string meldingType, string filLokasjon, Guid? klientMeldingId = default)
+        public async Task<SendtMelding> Svar(string meldingType, string filLokasjon, Guid? klientMeldingId = default, CancellationToken cancellationToken = default)
         {
-            return await Reply(meldingType, new FilePayload(filLokasjon), klientMeldingId)
+            return await Reply(meldingType, new FilePayload(filLokasjon), klientMeldingId, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        public async Task<SendtMelding> Svar(string meldingType, Guid? klientMeldingId = default)
+        public async Task<SendtMelding> Svar(string meldingType, Guid? klientMeldingId = default, CancellationToken cancellationToken = default)
         {
-            return await Svar(meldingType, new List<IPayload>(), klientMeldingId)
+            return await Svar(meldingType, new List<IPayload>(), klientMeldingId, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        public void Ack()
+        public async Task AckAsync()
         {
-            this._amqpAcknowledgeManager.Ack().Invoke();
+            await _amqpAcknowledgeManager.AckAsync().ConfigureAwait(false);
         }
 
-        public void Nack()
+        public async Task NackAsync()
         {
-            this._amqpAcknowledgeManager.Nack().Invoke();
+            await _amqpAcknowledgeManager.NackAsync().ConfigureAwait(false);
         }
 
-        public void NackWithRequeue()
+        public async Task NackWithRequeueAsync()
         {
-            this._amqpAcknowledgeManager.NackWithRequeue().Invoke();
+            await _amqpAcknowledgeManager.NackWithRequeueAsync().ConfigureAwait(false);
         }
 
-        private async Task<SendtMelding> Reply(string messageType, IPayload payload, Guid? klientMeldingId)
+        private async Task<SendtMelding> Reply(string messageType, IPayload payload, Guid? klientMeldingId, CancellationToken cancellationToken)
         {
             return await Svar(messageType, new List<IPayload> {payload}, klientMeldingId).ConfigureAwait(false);
         }
@@ -78,6 +79,7 @@ namespace KS.Fiks.IO.Client.Send
                 avsenderKontoId: _mottattMelding.MottakerKontoId,
                 mottakerKontoId: _mottattMelding.AvsenderKontoId,
                 klientMeldingId: klientMeldingId,
+                klientKorrelasjonsId: _mottattMelding.KlientKorrelasjonsId,
                 meldingType: messageType,
                 ttl: null,
                 headere: null,

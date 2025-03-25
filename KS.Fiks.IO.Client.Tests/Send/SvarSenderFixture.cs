@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using KS.Fiks.IO.Client.Amqp;
 using KS.Fiks.IO.Client.FileIO;
@@ -15,17 +17,17 @@ namespace KS.Fiks.IO.Client.Tests.Send
     {
         private MottattMelding _mottattMelding;
 
-        private Action _ack;
-        private Action _nack;
-        private Action _nackWithRequeue;
+        private Func<Task> _ack;
+        private Func<Task> _nack;
+        private Func<Task> _nackWithRequeue;
 
         public SvarSenderFixture()
         {
             SendHandlerMock = new Mock<ISendHandler>();
             _mottattMelding = null;
-            _ack = Mock.Of<Action>();
-            _nack = Mock.Of<Action>();
-            _nackWithRequeue = Mock.Of<Action>();
+            _ack = Mock.Of<Func<Task>>();
+            _nack = Mock.Of<Func<Task>>();
+            _nackWithRequeue = Mock.Of<Func<Task>>();
         }
 
         public SvarSenderFixture WithMottattMelding(MottattMelding mottattMelding)
@@ -34,19 +36,19 @@ namespace KS.Fiks.IO.Client.Tests.Send
             return this;
         }
 
-        public SvarSenderFixture WithAck(Action ack)
+        public SvarSenderFixture WithAck(Func<Task> ack)
         {
             _ack = ack;
             return this;
         }
 
-        public SvarSenderFixture WithNack(Action nack)
+        public SvarSenderFixture WithNack(Func<Task> nack)
         {
             this._nack = nack;
             return this;
         }
 
-        public SvarSenderFixture WithNackRequeue(Action nackRequeue)
+        public SvarSenderFixture WithNackRequeue(Func<Task> nackRequeue)
         {
             this._nackWithRequeue = nackRequeue;
             return this;
@@ -68,9 +70,11 @@ namespace KS.Fiks.IO.Client.Tests.Send
 
         private void SetupMocks()
         {
-            SendHandlerMock.Setup(_ => _.Send(It.IsAny<MeldingRequest>(), It.IsAny<IPayload[]>()))
-                .ReturnsAsync(new SendtMelding(Guid.NewGuid(), Guid.NewGuid(), "sendtMelding", Guid.NewGuid(), Guid.NewGuid(),
+            SendHandlerMock.Setup(_ => _.Send(It.IsAny<MeldingRequest>(), It.IsAny<IPayload[]>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new SendtMelding(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid().ToString(), "sendtMelding", Guid.NewGuid(), Guid.NewGuid(),
                     TimeSpan.Zero, null));
+            SendHandlerMock.Setup(_ => _.Send(It.IsAny<MeldingRequest>(), It.IsAny<IList<IPayload>>(), It.Is<CancellationToken>(x => x.IsCancellationRequested)))
+                .ThrowsAsync(new TaskCanceledException());
         }
     }
 }

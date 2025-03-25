@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
 using KS.Fiks.IO.Client.Amqp;
 using KS.Fiks.IO.Client.Configuration;
 using KS.Fiks.IO.Client.Dokumentlager;
@@ -61,10 +63,31 @@ namespace KS.Fiks.IO.Client.Tests
 
         public FiksIOClient CreateSut()
         {
-            SetupConfiguration();
+            SetupConfiguration(true);
             SetupMocks();
             return FiksIOClient.CreateAsync(
                 _configuration,
+                null,
+                null,
+                null,
+                null,
+                CatalogHandlerMock.Object,
+                MaskinportenClientMock.Object,
+                SendHandlerMock.Object,
+                DokumentlagerHandlerMock.Object,
+                AmqpHandlerMock.Object,
+                asicEncrypter: AsicEncrypterMock.Object).Result;
+        }
+
+        public FiksIOClient CreateSutWithoutMaskinportenConfig()
+        {
+            SetupConfiguration(false);
+            SetupMocks();
+            return FiksIOClient.CreateAsync(
+                _configuration,
+                null,
+                null,
+                null,
                 null,
                 CatalogHandlerMock.Object,
                 MaskinportenClientMock.Object,
@@ -131,22 +154,28 @@ namespace KS.Fiks.IO.Client.Tests
         private void SetupMocks()
         {
             CatalogHandlerMock.Setup(_ => _.Lookup(It.IsAny<LookupRequest>())).ReturnsAsync(_lookupReturn);
-            SendHandlerMock.Setup(_ => _.Send(It.IsAny<MeldingRequest>(), It.IsAny<IList<IPayload>>()))
+            SendHandlerMock.Setup(_ => _.Send(It.IsAny<MeldingRequest>(), It.IsAny<IList<IPayload>>(), It.IsAny<CancellationToken>()))
                            .ReturnsAsync(_sendtMeldingReturn);
-            AmqpHandlerMock.Setup(_ => _.AddMessageReceivedHandler(
-                It.IsAny<EventHandler<MottattMeldingArgs>>(),
-                It.IsAny<EventHandler<ConsumerEventArgs>>()));
+            SendHandlerMock.Setup(_ => _.Send(It.IsAny<MeldingRequest>(), It.IsAny<IList<IPayload>>(), It.Is<CancellationToken>(x => x.IsCancellationRequested)))
+                .ThrowsAsync(new TaskCanceledException());
+            AmqpHandlerMock.Setup(_ => _.AddMessageReceivedHandlerAsync(
+                    It.IsAny<Func<MottattMeldingArgs, Task>>(),
+                    It.IsAny<Func<ConsumerEventArgs, Task>>()))
+                .Returns(Task.CompletedTask);
         }
 
-        private void SetupConfiguration()
+        private void SetupConfiguration(bool withMaskinportenConfig)
         {
             var apiConfiguration = new ApiConfiguration(_scheme, _host, _port);
             var accountConfiguration = new KontoConfiguration(_accountId, "dummyKey");
+            var maskinportenConfig = withMaskinportenConfig
+                ? new MaskinportenClientConfiguration("audience", "token", "issuer", 1, new X509Certificate2())
+                : null;
             _configuration = new FiksIOConfiguration(
                 accountConfiguration,
                 new IntegrasjonConfiguration(_integrasjonId, _integrasjonPassword),
-                new MaskinportenClientConfiguration("audience", "token", "issuer", 1, new X509Certificate2()),
-                new AsiceSigningConfiguration("",""),
+                maskinportenConfig,
+                new AsiceSigningConfiguration("", ""),
                 apiConfiguration: apiConfiguration,
                 katalogConfiguration: _katalogConfiguration);
         }

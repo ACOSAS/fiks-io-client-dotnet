@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using KS.Fiks.IO.Client.Amqp;
 using KS.Fiks.IO.Client.Configuration;
@@ -30,6 +31,8 @@ namespace KS.Fiks.IO.Client
 {
     public class FiksIOClient : IFiksIOClient
     {
+        private readonly ICatalogHandler _catalogHandler;
+
         private ISendHandler _sendHandler;
 
         private ILoggerFactory _loggerFactory;
@@ -39,8 +42,6 @@ namespace KS.Fiks.IO.Client
         private IDokumentlagerHandler _dokumentlagerHandler;
 
         private IMaskinportenClient _maskinportenClient;
-
-        private readonly ICatalogHandler _catalogHandler;
 
         private FiksIOClient(
             FiksIOConfiguration configuration,
@@ -74,13 +75,10 @@ namespace KS.Fiks.IO.Client
                 _maskinportenClient,
                 httpClient);
 
-            if (asicEncrypter == null)
-            {
-                asicEncrypter = new AsicEncrypter(
-                    new AsiceBuilderFactory(),
-                    new EncryptionServiceFactory(),
-                    AsicSigningCertificateHolderFactory.Create(configuration.AsiceSigningConfiguration));
-            }
+            asicEncrypter ??= new AsicEncrypter(
+                new AsiceBuilderFactory(),
+                new EncryptionServiceFactory(),
+                AsicSigningCertificateHolderFactory.Create(configuration.AsiceSigningConfiguration));
 
             _sendHandler = sendHandler ??
                            new SendHandler(
@@ -110,25 +108,13 @@ namespace KS.Fiks.IO.Client
             ILoggerFactory loggerFactory = null,
             HttpClient httpClient = null,
             IPublicKeyProvider publicKeyProvider = null,
-            IAmqpWatcher amqpWatcher = null)
-        {
-            var client = new FiksIOClient(configuration, loggerFactory, httpClient, publicKeyProvider);
-            await client.InitializeAmqpHandlerAsync(configuration, amqpWatcher).ConfigureAwait(false);
-            return client;
-        }
-
-        internal static async Task<FiksIOClient> CreateAsync(
-            FiksIOConfiguration configuration,
-            LoggerFactory loggerFactory = null,
+            IAmqpWatcher amqpWatcher = null,
             ICatalogHandler catalogHandler = null,
             IMaskinportenClient maskinportenClient = null,
             ISendHandler sendHandler = null,
             IDokumentlagerHandler dokumentlagerHandler = null,
             IAmqpHandler amqpHandler = null,
-            HttpClient httpClient = null,
-            IPublicKeyProvider publicKeyProvider = null,
-            IAsicEncrypter asicEncrypter = null,
-            IAmqpWatcher amqpWatcher = null)
+            IAsicEncrypter asicEncrypter = null)
         {
             var client = new FiksIOClient(
                 configuration,
@@ -146,10 +132,11 @@ namespace KS.Fiks.IO.Client
             return client;
         }
 
-        private async Task InitializeAmqpHandlerAsync(FiksIOConfiguration configuration,
+        private async Task InitializeAmqpHandlerAsync(
+            FiksIOConfiguration configuration,
             IAmqpWatcher amqpWatcher = null)
         {
-            _amqpHandler = _amqpHandler ?? await AmqpHandler.CreateAsync(
+            _amqpHandler ??= await AmqpHandler.CreateAsync(
                 _maskinportenClient,
                 _sendHandler,
                 _dokumentlagerHandler,
@@ -178,65 +165,51 @@ namespace KS.Fiks.IO.Client
             return await _catalogHandler.GetStatus(kontoId).ConfigureAwait(false);
         }
 
-        public async Task<SendtMelding> Send(MeldingRequest request)
+        public async Task<SendtMelding> Send(MeldingRequest request, CancellationToken cancellationToken = default)
         {
-            return await Send(request, new List<IPayload>()).ConfigureAwait(false);
+            return await Send(request, new List<IPayload>(), cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<SendtMelding> Send(MeldingRequest request, IList<IPayload> payload)
+        public async Task<SendtMelding> Send(MeldingRequest request, IList<IPayload> payload, CancellationToken cancellationToken = default)
         {
-            return await _sendHandler.Send(request, payload).ConfigureAwait(false);
+            return await _sendHandler.Send(request, payload, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<SendtMelding> Send(MeldingRequest request, string pathToPayload)
+        public async Task<SendtMelding> Send(MeldingRequest request, string pathToPayload, CancellationToken cancellationToken = default)
         {
-            return await Send(request, new FilePayload(pathToPayload)).ConfigureAwait(false);
+            return await Send(request, new FilePayload(pathToPayload), cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<SendtMelding> Send(MeldingRequest request, string payload, string filename)
+        public async Task<SendtMelding> Send(MeldingRequest request, string payload, string filename, CancellationToken cancellationToken = default)
         {
-            return await Send(request, new StringPayload(payload, filename)).ConfigureAwait(false);
+            return await Send(request, new StringPayload(payload, filename), cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<SendtMelding> Send(MeldingRequest request, Stream payload, string filename)
+        public async Task<SendtMelding> Send(MeldingRequest request, Stream payload, string filename, CancellationToken cancellationToken = default)
         {
-            return await Send(request, new StreamPayload(payload, filename)).ConfigureAwait(false);
+            return await Send(request, new StreamPayload(payload, filename), cancellationToken).ConfigureAwait(false);
         }
 
-        public void NewSubscription(EventHandler<MottattMeldingArgs> onMottattMelding)
+        public async Task NewSubscriptionAsync(Func<MottattMeldingArgs, Task> onMottattMelding, Func<ConsumerEventArgs, Task> onCanceled = null)
         {
-            NewSubscription(onMottattMelding, null);
+                await _amqpHandler
+                    .AddMessageReceivedHandlerAsync(onMottattMelding, onCanceled ?? (_ => Task.CompletedTask))
+                    .ConfigureAwait(false);
         }
 
-        public void NewSubscription(
-            EventHandler<MottattMeldingArgs> onMottattMelding,
-            EventHandler<ConsumerEventArgs> onCanceled)
+        public async Task<bool> IsOpenAsync()
         {
-            _amqpHandler.AddMessageReceivedHandler(onMottattMelding, onCanceled);
+            return await _amqpHandler.IsOpenAsync().ConfigureAwait(false);
         }
 
-        public bool IsOpen()
+        public async ValueTask DisposeAsync()
         {
-            return _amqpHandler.IsOpen();
+                await _amqpHandler.DisposeAsync().ConfigureAwait(false);
         }
 
-        public void Dispose()
+        private async Task<SendtMelding> Send(MeldingRequest request, IPayload payload, CancellationToken cancellationToken)
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _amqpHandler?.Dispose();
-            }
-        }
-
-        private async Task<SendtMelding> Send(MeldingRequest request, IPayload payload)
-        {
-            return await Send(request, new List<IPayload> { payload }).ConfigureAwait(false);
+            return await Send(request, new List<IPayload> {payload}, cancellationToken).ConfigureAwait(false);
         }
     }
 }

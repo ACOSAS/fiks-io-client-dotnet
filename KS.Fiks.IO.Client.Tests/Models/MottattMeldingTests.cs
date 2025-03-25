@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
 using KS.Fiks.IO.Client.Models;
+using Shouldly;
 using Xunit;
 
 namespace KS.Fiks.IO.Client.Tests.Models
@@ -12,25 +12,25 @@ namespace KS.Fiks.IO.Client.Tests.Models
         public void TestKlientMeldingIdIsExtractedFromHeaderWhenGuid()
         {
             var klientMeldingId = Guid.NewGuid();
-            var headere = new Dictionary<string, string>() {{ MeldingBase.headerKlientMeldingId, klientMeldingId.ToString() }};
+            var headere = new Dictionary<string, string>() {{ MeldingBase.HeaderKlientMeldingId, klientMeldingId.ToString() }};
             var mottattMelding = new MottattMelding(false,
                 new MottattMeldingMetadata(Guid.NewGuid(), "meldingtype", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
                     TimeSpan.Zero, headere), null, null, null);
 
-            mottattMelding.KlientMeldingId.Should().Be(klientMeldingId);
+            mottattMelding.KlientMeldingId.ShouldBe(klientMeldingId);
         }
 
         [Fact]
         public void TestKlientMeldingIdIsGuidEmptyWhenNotAGuid()
         {
             var klientMeldingId = "dette er ikke en guid";
-            var headere = new Dictionary<string, string>() {{ MeldingBase.headerKlientMeldingId, klientMeldingId }};
+            var headere = new Dictionary<string, string>() {{ MeldingBase.HeaderKlientMeldingId, klientMeldingId }};
             var mottattMelding = new MottattMelding(false,
                 new MottattMeldingMetadata(Guid.NewGuid(), "meldingtype", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
                     TimeSpan.Zero, headere), null, null, null);
 
-            mottattMelding.KlientMeldingId.Should().Be(Guid.Empty);
-            mottattMelding.Headere.Values.Should().Contain(klientMeldingId);
+            mottattMelding.KlientMeldingId.ShouldBe(Guid.Empty);
+            mottattMelding.Headere.Values.ShouldContain(klientMeldingId);
         }
 
         [Fact]
@@ -40,19 +40,19 @@ namespace KS.Fiks.IO.Client.Tests.Models
                 new MottattMeldingMetadata(Guid.NewGuid(), "meldingtype", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
                     TimeSpan.Zero, null), null, null, null);
 
-            mottattMelding.KlientMeldingId.Should().BeNull();
+            mottattMelding.KlientMeldingId.ShouldBeNull();
         }
 
         [Fact]
         public void TestResendtIsDefaultFalse()
         {
             var klientMeldingId = Guid.NewGuid();
-            var headere = new Dictionary<string, string>() {{ MeldingBase.headerKlientMeldingId, klientMeldingId.ToString() }};
+            var headere = new Dictionary<string, string>() {{ MeldingBase.HeaderKlientMeldingId, klientMeldingId.ToString() }};
             var mottattMelding = new MottattMelding(false,
                 new MottattMeldingMetadata(Guid.NewGuid(), "meldingtype", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
                     TimeSpan.Zero, headere), null, null, null);
 
-            mottattMelding.Resendt.Should().BeFalse();
+            mottattMelding.Resendt.ShouldBeFalse();
         }
 
         [Fact]
@@ -60,12 +60,12 @@ namespace KS.Fiks.IO.Client.Tests.Models
         {
             var resendt = true;
             var klientMeldingId = Guid.NewGuid();
-            var headere = new Dictionary<string, string>() {{ MeldingBase.headerKlientMeldingId, klientMeldingId.ToString() }};
+            var headere = new Dictionary<string, string>() {{ MeldingBase.HeaderKlientMeldingId, klientMeldingId.ToString() }};
             var mottattMelding = new MottattMelding(false,
                 new MottattMeldingMetadata(Guid.NewGuid(), "meldingtype", Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
                     TimeSpan.Zero, headere, resendt), null, null, null);
 
-            mottattMelding.Resendt.Should().BeTrue();
+            mottattMelding.Resendt.ShouldBeTrue();
         }
     }
 }
