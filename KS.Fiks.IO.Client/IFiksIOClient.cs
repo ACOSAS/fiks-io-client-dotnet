@@ -14,8 +14,6 @@ namespace KS.Fiks.IO.Client
     {
         Guid KontoId { get; }
 
-        Task<Konto> Lookup(LookupRequest request);
-
         Task<Konto> GetKonto(Guid kontoId);
 
         Task<Status> GetKontoStatus(Guid kontoId);
@@ -33,5 +31,7 @@ namespace KS.Fiks.IO.Client
         Task NewSubscriptionAsync(Func<MottattMeldingArgs, Task> onMottattMelding, Func<ConsumerEventArgs, Task> onCanceled = null);
 
         Task<bool> IsOpenAsync();
+
+        Task<bool> ValidatePublicKeyAgainstPrivateKeyAsync();
     }
 }
